@@ -38,12 +38,9 @@ export default function GameLayout() {
 
     // Dynamic Title Updater
     useEffect(() => {
-        const unsubscribe = useGameStore.subscribe(
-            (state) => state.linesOfCode,
-            (lines) => {
-                document.title = `${Math.floor(lines).toLocaleString()} LoC - Code Clicker`;
-            }
-        );
+        const unsubscribe = useGameStore.subscribe((state) => {
+            document.title = `${Math.floor(state.linesOfCode).toLocaleString()} LoC - Code Clicker`;
+        });
         return () => unsubscribe();
     }, []);
 
