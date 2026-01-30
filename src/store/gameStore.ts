@@ -540,6 +540,7 @@ export const useGameStore = create<GameState>()(
         }),
         {
             name: 'clicker-storage',
+            version: 2, // Bump version to force reset
             partialize: (state) => ({
                 linesOfCode: state.linesOfCode,
                 cps: state.cps,
