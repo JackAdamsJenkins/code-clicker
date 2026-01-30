@@ -6,8 +6,9 @@ import clsx from 'clsx';
 import { formatNumber } from '../utils/formatNumber';
 
 export default function PrestigeModal() {
-    const { commits, getPrestigeGain, prestige } = useGameStore();
+    const { commits, getPrestigeGain, prestige, getNextCommitCost } = useGameStore();
     const gain = getPrestigeGain();
+    const nextCost = getNextCommitCost();
     const canPrestige = gain > 0;
 
     // Simple state to toggle logic, but usually this is controlled by parent.
@@ -21,12 +22,24 @@ export default function PrestigeModal() {
     // Let's create a "Git Status" button that expands.
     return (
         <div className="fixed bottom-6 left-6 z-50">
-            <GitControls gain={gain} commits={commits} canPrestige={canPrestige} onPrestige={prestige} />
+            <GitControls
+                gain={gain}
+                commits={commits}
+                canPrestige={canPrestige}
+                onPrestige={prestige}
+                nextCost={nextCost}
+            />
         </div>
     );
 }
 
-function GitControls({ gain, commits, canPrestige, onPrestige }: { gain: number, commits: number, canPrestige: boolean, onPrestige: () => void }) {
+function GitControls({ gain, commits, canPrestige, onPrestige, nextCost }: {
+    gain: number,
+    commits: number,
+    canPrestige: boolean,
+    onPrestige: () => void,
+    nextCost: number
+}) {
     const [isOpen, setIsOpen] = useState(false);
 
     const handlePrestige = () => {
@@ -77,7 +90,9 @@ function GitControls({ gain, commits, canPrestige, onPrestige }: { gain: number,
                                 <span className="text-yellow-400 font-bold">+{formatNumber(gain)} Commits</span>
                                 {gain > 0 && <span className="text-xs text-green-500 animate-pulse">Ready to Push</span>}
                             </div>
-                            <p className="text-[10px] text-gray-500 mt-1">Requires 50k LoC per commit.</p>
+                            <p className="text-[10px] text-gray-500 mt-1">
+                                Next commit requires {formatNumber(nextCost)} LoC (Cost scales +15%).
+                            </p>
                         </div>
 
                         <button

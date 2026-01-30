@@ -112,6 +112,7 @@ interface GameState {
     commits: number;
     lifetimeLines: number;
     getPrestigeGain: () => number;
+    getNextCommitCost: () => number;
     prestige: () => void;
     activateSkill: (id: string) => void;
     buyTalent: (id: string) => void;
@@ -353,44 +354,62 @@ export const useGameStore = create<GameState>()(
 
             getPrestigeGain: () => {
                 const state = get();
-                if (state.linesOfCode < 50000) return 0;
+                // Magic formula for geometric series sum inverse
+                // We want to find max n where Sum(Cost_i) <= LinesOfCode
+                // Cost_i = Base * r^(Existing + i)
+                // Sum_n = Base * r^Existing * ((r^n - 1) / (r - 1))
 
-                // Talent Bonus (DevOps - t_d2)
+                const r = 1.15;
+                const base = 50000;
+                const currentCommits = state.commits;
+
+                // Optimization: If we can't afford the very next one
+                const nextCost = base * Math.pow(r, currentCommits);
+                if (state.linesOfCode < nextCost) return 0;
+
+                // N = log_r ( (Lines * (r - 1) / (Base * r^Commits)) + 1 )
+                const numerator = state.linesOfCode * (r - 1);
+                const denominator = base * Math.pow(r, currentCommits);
+                const val = (numerator / denominator) + 1;
+
+                const rawGain = Math.floor(Math.log(val) / Math.log(r));
+
+                // 2. Talent Multiplier (DevOps - t_d2: +10% Prestige Gain)
                 const d2Level = state.talents['t_d2'] || 0;
-                const multiplier = 1 + (d2Level * 0.1);
+                const talentMultiplier = 1 + (d2Level * 0.1);
 
-                return Math.floor((state.linesOfCode / 50000) * multiplier);
+                return Math.floor(rawGain * talentMultiplier);
+            },
+
+            getNextCommitCost: () => {
+                const state = get();
+                const r = 1.15;
+                const base = 50000;
+                return Math.floor(base * Math.pow(r, state.commits));
             },
 
             prestige: () => {
-                set((state) => {
-                    // Logic duplicated for safety, or we could call getPrestigeGain but we need state access inside set if we want to be pure
-                    // Re-calculating to be safe inside the reducer logic
-                    const d2Level = state.talents['t_d2'] || 0;
-                    const multiplier = 1 + (d2Level * 0.1);
-                    const gain = Math.floor((state.linesOfCode / 50000) * multiplier);
+                const gain = get().getPrestigeGain();
+                if (gain <= 0) return;
 
-                    if (gain <= 0) return state;
+                set((state) => ({
+                    // Reset Run
+                    linesOfCode: 0,
+                    cps: 0,
+                    clickPower: 1, // Base click power
+                    upgrades: INITIAL_UPGRADES,
+                    bugs: [],
+                    skills: {},
 
-                    return {
-                        // Reset Run
-                        linesOfCode: 0,
-                        cps: 0,
-                        clickPower: 1, // Base click power
-                        upgrades: INITIAL_UPGRADES,
-                        bugs: [],
-                        skills: {},
-
-                        // Gain Prestige
-                        commits: state.commits + gain,
-                        lifetimeLines: state.lifetimeLines + state.linesOfCode,
-                    };
-                });
+                    // Gain Prestige
+                    commits: state.commits + gain,
+                    lifetimeLines: state.lifetimeLines + state.linesOfCode,
+                }));
             },
 
             getProductionRate: () => {
                 const { cps, commits, skills, talents, bugs } = get();
-                
+
                 // 1. Commit Multiplier
                 const commitMultiplier = 1 + (commits * 0.1);
 
