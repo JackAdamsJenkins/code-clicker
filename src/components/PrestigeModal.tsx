@@ -91,7 +91,11 @@ function GitControls({ gain, commits, canPrestige, onPrestige, nextCost }: {
                                 {gain > 0 && <span className="text-xs text-green-500 animate-pulse">Ready to Push</span>}
                             </div>
                             <p className="text-[10px] text-gray-500 mt-1">
-                                Next commit requires {formatNumber(nextCost)} LoC (Cost scales +15%).
+                                {nextCost === -1 ? (
+                                    <span className="text-cta font-bold">MAX COMMITS REACHED</span>
+                                ) : (
+                                    <>Next commit requires {formatNumber(nextCost)} LoC (Cost scales +15%).</>
+                                )}
                             </p>
                         </div>
 

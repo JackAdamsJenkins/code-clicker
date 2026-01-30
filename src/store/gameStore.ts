@@ -354,11 +354,12 @@ export const useGameStore = create<GameState>()(
 
             getPrestigeGain: () => {
                 const state = get();
-                // Magic formula for geometric series sum inverse
-                // We want to find max n where Sum(Cost_i) <= LinesOfCode
-                // Cost_i = Base * r^(Existing + i)
-                // Sum_n = Base * r^Existing * ((r^n - 1) / (r - 1))
+                const MAX_COMMITS = 3000; // Hard Cap to prevent Infinity cost
+                const MAX_PRESTIGE_GAIN = 1000; // Max per run to prevent skipping progression too fast
 
+                if (state.commits >= MAX_COMMITS) return 0;
+
+                // Magic formula for geometric series sum inverse
                 const r = 1.15;
                 const base = 50000;
                 const currentCommits = state.commits;
@@ -369,23 +370,35 @@ export const useGameStore = create<GameState>()(
 
                 // N = log_r ( (Lines * (r - 1) / (Base * r^Commits)) + 1 )
                 const numerator = state.linesOfCode * (r - 1);
+                // Safe check for denominator
                 const denominator = base * Math.pow(r, currentCommits);
+                if (!isFinite(denominator) || denominator === 0) return 0;
+
                 const val = (numerator / denominator) + 1;
 
-                const rawGain = Math.floor(Math.log(val) / Math.log(r));
+                let rawGain = Math.floor(Math.log(val) / Math.log(r));
 
                 // 2. Talent Multiplier (DevOps - t_d2: +10% Prestige Gain)
                 const d2Level = state.talents['t_d2'] || 0;
                 const talentMultiplier = 1 + (d2Level * 0.1);
 
-                return Math.floor(rawGain * talentMultiplier);
+                let totalGain = Math.floor(rawGain * talentMultiplier);
+
+                // Apply Caps
+                totalGain = Math.min(totalGain, MAX_PRESTIGE_GAIN);
+                const spaceLeft = MAX_COMMITS - state.commits;
+                return Math.min(totalGain, spaceLeft);
             },
 
             getNextCommitCost: () => {
                 const state = get();
+                const MAX_COMMITS = 3000;
+                if (state.commits >= MAX_COMMITS) return -1; // Maxed
+
                 const r = 1.15;
                 const base = 50000;
-                return Math.floor(base * Math.pow(r, state.commits));
+                const cost = Math.floor(base * Math.pow(r, state.commits));
+                return isFinite(cost) ? cost : -1;
             },
 
             prestige: () => {
