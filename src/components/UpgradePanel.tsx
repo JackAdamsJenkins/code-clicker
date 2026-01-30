@@ -13,15 +13,17 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function UpgradePanel() {
-    const { upgrades, linesOfCode, buyUpgrade } = useGameStore();
+    const { upgrades, linesOfCode, buyUpgrade, commits } = useGameStore();
 
     const getCost = (u: Upgrade) => Math.floor(u.baseCost * Math.pow(1.15, u.count));
+    const multiplier = 1 + (commits * 0.1);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-20">
             {upgrades.map((u) => {
                 const cost = getCost(u);
                 const canAfford = linesOfCode >= cost;
+                const effectiveCps = u.baseCps * multiplier;
 
                 return (
                     <motion.button
@@ -65,7 +67,7 @@ export default function UpgradePanel() {
                                     {u.description}
                                 </span>
                                 <span className="text-[9px] uppercase tracking-widest text-secondary mt-0.5 font-bold">
-                                    +{u.baseCps} LOC/s
+                                    +{effectiveCps.toFixed(1)} LOC/s
                                 </span>
                             </div>
                         </div>

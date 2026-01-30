@@ -17,7 +17,9 @@ interface Particle {
 }
 
 export default function ClickArea() {
-    const { linesOfCode, cps, click, clickPower } = useGameStore();
+    const { linesOfCode, cps, click, clickPower, commits } = useGameStore();
+    const multiplier = 1 + (commits * 0.1);
+    const effectiveCps = cps * multiplier;
     const [particles, setParticles] = useState<Particle[]>([]);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -72,7 +74,7 @@ export default function ClickArea() {
 
                 <div className="inline-flex items-center space-x-2 px-6 py-2 mt-4 bg-background/50 border border-primary/30 rounded-full text-xs font-mono font-bold text-cta shadow-[0_0_10px_rgba(244,63,94,0.3)]">
                     <Cpu size={14} className="animate-pulse" />
-                    <span>{cps.toFixed(1)} LOC/s</span>
+                    <span>{effectiveCps.toFixed(1)} LOC/s</span>
                 </div>
             </div>
 
