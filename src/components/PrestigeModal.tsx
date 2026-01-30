@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
 import { GitCommit, GitBranch } from 'lucide-react';
 import clsx from 'clsx';
+import { formatNumber } from '../utils/formatNumber';
 
 export default function PrestigeModal() {
     const { commits, getPrestigeGain, prestige } = useGameStore();
@@ -59,11 +60,11 @@ function GitControls({ gain, commits, canPrestige, onPrestige }: { gain: number,
                             </div>
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-400">Total Commits:</span>
-                                <span className="font-mono text-white">{commits}</span>
+                                <span className="font-mono text-white">{formatNumber(commits)}</span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-400">Multiplier:</span>
-                                <span className="font-mono text-green-400">x{(1 + commits * 0.1).toFixed(1)}</span>
+                                <span className="font-mono text-green-400">x{formatNumber(1 + commits * 0.1)}</span>
                             </div>
                         </div>
 
@@ -73,7 +74,7 @@ function GitControls({ gain, commits, canPrestige, onPrestige }: { gain: number,
                                 <span className="text-xs text-gray-500">Unstaged Changes (LoC):</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-yellow-400 font-bold">+{gain} Commits</span>
+                                <span className="text-yellow-400 font-bold">+{formatNumber(gain)} Commits</span>
                                 {gain > 0 && <span className="text-xs text-green-500 animate-pulse">Ready to Push</span>}
                             </div>
                             <p className="text-[10px] text-gray-500 mt-1">Requires 50k LoC per commit.</p>
@@ -105,7 +106,7 @@ function GitControls({ gain, commits, canPrestige, onPrestige }: { gain: number,
                 {gain > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-4 w-4">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cta opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-4 w-4 bg-cta items-center justify-center text-[8px] text-white font-bold">{gain > 9 ? '!' : gain}</span>
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-cta items-center justify-center text-[8px] text-white font-bold">{gain > 9 ? '!' : formatNumber(gain)}</span>
                     </span>
                 )}
             </button>

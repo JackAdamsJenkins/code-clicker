@@ -2,6 +2,7 @@ import { useGameStore, type Upgrade } from '../store/gameStore';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { Keyboard, FileCode, Copy, Monitor, Users, Bot, CircleDashed } from 'lucide-react';
+import { formatNumber } from '../utils/formatNumber';
 
 const ICONS: Record<string, React.ReactNode> = {
     'u1': <Keyboard size={24} />,
@@ -81,7 +82,7 @@ export default function UpgradePanel() {
                                     {u.description}
                                 </span>
                                 <span className="text-[9px] uppercase tracking-widest text-secondary mt-0.5 font-bold">
-                                    +{effectiveCps.toFixed(1)} LOC/s
+                                    +{formatNumber(effectiveCps)} LOC/s
                                 </span>
                             </div>
                         </div>
@@ -91,7 +92,7 @@ export default function UpgradePanel() {
                                 "font-mono text-lg font-bold tracking-tight",
                                 canAfford ? "text-white text-glow" : "text-gray-500"
                             )}>
-                                {cost.toLocaleString()}
+                                {formatNumber(cost)}
                             </span>
                             <div className={clsx(
                                 "flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border",

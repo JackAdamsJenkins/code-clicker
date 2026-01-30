@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal, Code, Cpu } from 'lucide-react';
 import { clsx } from 'clsx';
+import { formatNumber } from '../utils/formatNumber';
 
 const SNIPPETS = [
     'const', 'let', 'var', 'await', 'async', 'return', 'import', 'export',
@@ -64,7 +65,7 @@ export default function ClickArea() {
 
                 <div className="relative">
                     <h1 className="text-6xl md:text-7xl font-bold tracking-tighter text-white leading-tight text-glow filter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
-                        {Math.floor(linesOfCode).toLocaleString()}
+                        {formatNumber(Math.floor(linesOfCode))}
                     </h1>
                     <div className="absolute -inset-1 bg-primary/20 blur-xl -z-10 rounded-full opacity-50"></div>
                 </div>
@@ -73,7 +74,7 @@ export default function ClickArea() {
 
                 <div className="inline-flex items-center space-x-2 px-6 py-2 mt-4 bg-background/50 border border-primary/30 rounded-full text-xs font-mono font-bold text-cta shadow-[0_0_10px_rgba(244,63,94,0.3)]">
                     <Cpu size={14} className="animate-pulse" />
-                    <span>{effectiveCps.toFixed(1)} LOC/s</span>
+                    <span>{formatNumber(effectiveCps)} LOC/s</span>
                 </div>
             </div>
 
