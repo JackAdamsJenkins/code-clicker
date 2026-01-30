@@ -10,6 +10,17 @@ export interface SkillDef {
     icon?: string;
 }
 
+export type GameMode = 'dev' | 'secops';
+
+export interface SecOpsUpgrade {
+    id: string;
+    name: string;
+    baseCost: number;
+    baseEps: number; // Entropy per second
+    count: number;
+    description: string;
+}
+
 export interface SkillState {
     activeTimeRemaining: number;
     cooldownRemaining: number;
@@ -99,6 +110,13 @@ interface GameState {
     skills: Record<string, SkillState>;
     talents: Record<string, number>; // id -> level
 
+    // Start SecOps
+    gameMode: GameMode;
+    entropy: number;
+    lifetimeEntropy: number;
+    secOpsUpgrades: SecOpsUpgrade[];
+    // End SecOps
+
     // Actions
     click: () => void;
     tick: (seconds: number) => void;
@@ -117,6 +135,13 @@ interface GameState {
     activateSkill: (id: string) => void;
     buyTalent: (id: string) => void;
     getProductionRate: () => number;
+
+    // SecOps Actions
+    promoteToSecOps: () => void;
+    clickSecOps: () => void;
+    buySecOpsUpgrade: (id: string) => void;
+    // Debug
+    debugSetCommits: (amount: number) => void;
 }
 
 const INITIAL_UPGRADES: Upgrade[] = [
@@ -126,6 +151,15 @@ const INITIAL_UPGRADES: Upgrade[] = [
     { id: 'u4', name: 'Mechanical Keyboard', baseCost: 12000, baseCps: 47, baseClick: 0, count: 0, description: 'Clickity clack!' },
     { id: 'u5', name: 'Pair Programmer', baseCost: 130000, baseCps: 260, baseClick: 0, count: 0, description: 'Two heads are better.' },
     { id: 'u6', name: 'AI Assistant', baseCost: 1400000, baseCps: 1400, baseClick: 0, count: 0, description: 'Code generates itself.' },
+];
+
+const INITIAL_SECOPS_UPGRADES: SecOpsUpgrade[] = [
+    { id: 'su1', name: 'Script Kiddie', baseCost: 10, baseEps: 1, count: 0, description: 'Basic automated ping scripts.' },
+    { id: 'su2', name: 'VPN Tunnel', baseCost: 100, baseEps: 5, count: 0, description: 'Encrypted traffic routing.' },
+    { id: 'su3', name: 'Botnet Node', baseCost: 1000, baseEps: 25, count: 0, description: 'Distributed processing power.' },
+    { id: 'su4', name: '0-Day Exploit', baseCost: 12500, baseEps: 100, count: 0, description: 'Unpatchable vulnerabilities.' },
+    { id: 'su5', name: 'Quantum Decryptor', baseCost: 200000, baseEps: 500, count: 0, description: 'Breaks encryption instantly.' },
+    { id: 'su6', name: 'AI Sentinel', baseCost: 3000000, baseEps: 2500, count: 0, description: 'Autonomous defense grid.' },
 ];
 
 export const useGameStore = create<GameState>()(
@@ -139,6 +173,12 @@ export const useGameStore = create<GameState>()(
             lifetimeLines: 0,
             skills: {},
             talents: {},
+
+            // SecOps Init
+            gameMode: 'dev',
+            entropy: 0,
+            lifetimeEntropy: 0,
+            secOpsUpgrades: INITIAL_SECOPS_UPGRADES,
 
             click: () => {
                 set((state) => {
@@ -165,6 +205,21 @@ export const useGameStore = create<GameState>()(
             },
 
             tick: (seconds) => {
+                const { gameMode } = get();
+
+                if (gameMode === 'secops') {
+                    const { secOpsUpgrades } = get();
+                    const eps = secOpsUpgrades.reduce((acc, u) => acc + (u.baseEps * u.count), 0);
+
+                    if (eps > 0) {
+                        set((state) => ({
+                            entropy: state.entropy + (eps * seconds),
+                            lifetimeEntropy: state.lifetimeEntropy + (eps * seconds)
+                        }));
+                    }
+                    return;
+                }
+
                 const { cps, cleanupBugs, commits, skills } = get();
 
                 // Update Skills Timers
@@ -442,6 +497,46 @@ export const useGameStore = create<GameState>()(
 
                 return cps * commitMultiplier * skillCpsMultiplier * effectiveBugPenalty * talentMultiplier;
             },
+
+            promoteToSecOps: () => {
+                set({
+                    gameMode: 'secops',
+                    entropy: 0,
+                    linesOfCode: 0, // Reset old resource or keep it? Let's keep it but it's not used
+                    // We can reset other things if we want a hard switch
+                });
+            },
+
+            clickSecOps: () => {
+                set((state) => ({
+                    entropy: state.entropy + 1, // Base click for now
+                    lifetimeEntropy: state.lifetimeEntropy + 1
+                }));
+            },
+
+            buySecOpsUpgrade: (id) => {
+                set((state) => {
+                    const upgradeIndex = state.secOpsUpgrades.findIndex((u) => u.id === id);
+                    if (upgradeIndex === -1) return state;
+
+                    const upgrade = state.secOpsUpgrades[upgradeIndex];
+                    const cost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count));
+
+                    if (state.entropy >= cost) {
+                        const newUpgrades = [...state.secOpsUpgrades];
+                        newUpgrades[upgradeIndex] = { ...upgrade, count: upgrade.count + 1 };
+
+                        return {
+                            entropy: state.entropy - cost,
+                            secOpsUpgrades: newUpgrades,
+                        };
+                    }
+                    return state;
+                });
+            },
+
+            // Debug
+            debugSetCommits: (amount) => set({ commits: amount }),
         }),
         {
             name: 'clicker-storage',
@@ -453,6 +548,10 @@ export const useGameStore = create<GameState>()(
                 lifetimeLines: state.lifetimeLines,
                 skills: state.skills,
                 talents: state.talents,
+                gameMode: state.gameMode,
+                entropy: state.entropy,
+                lifetimeEntropy: state.lifetimeEntropy,
+                secOpsUpgrades: state.secOpsUpgrades,
             }),
         }
     )

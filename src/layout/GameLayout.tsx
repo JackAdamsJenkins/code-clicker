@@ -70,6 +70,15 @@ export default function GameLayout() {
                 <div className="absolute bottom-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-80 md:hidden"></div>
 
                 <ClickArea />
+
+                {/* Debug Button (Hidden/Dev only) */}
+                <button
+                    onClick={() => useGameStore.getState().debugSetCommits(100)}
+                    className="absolute bottom-4 left-4 opacity-10 hover:opacity-100 text-[10px] text-red-500 font-mono transition-opacity"
+                    title="DEBUG: Set 100 Commits"
+                >
+                    [DEBUG: +100 COMMITS]
+                </button>
             </section>
 
             {/* Right Panel: Upgrades & Shop */}
