@@ -10,20 +10,42 @@ export default function GameLayout() {
     const spawnBug = useGameStore((state) => state.spawnBug);
 
     useEffect(() => {
-        // Game loop - tick every 100ms
-        const interval = setInterval(() => {
-            tick(0.1);
+        // Game loop - using delta time to handle background throttling
+        let lastTime = Date.now();
 
-            // Random bug spawn (approx every 10-20 seconds)
-            // 1% chance per tick (10 ticks/sec = 10% chance per second) -> too high?
-            // Let's settle on 0.5% chance per 100ms tick = ~5% chance per second.
-            if (Math.random() < 0.005) {
+        const interval = setInterval(() => {
+            const now = Date.now();
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            // Update game state based on actual time elapsed
+            if (dt > 0) {
+                tick(dt);
+            }
+
+            // Random bug spawn logic
+            // We scale the probability based on time passed to keep spawn rate consistent
+            // Base chance: 0.5% per 100ms -> approx 5% per second
+            // Probability of *at least one* spawn in time dt: P = 1 - (1 - p)^n where n = dt / 0.1
+            // Approximation for small p*n: P ~= p * n = 0.005 * (dt / 0.1) = 0.05 * dt
+            if (Math.random() < 0.05 * dt) {
                 spawnBug();
             }
         }, 100);
 
         return () => clearInterval(interval);
     }, [tick, spawnBug]);
+
+    // Dynamic Title Updater
+    useEffect(() => {
+        const unsubscribe = useGameStore.subscribe(
+            (state) => state.linesOfCode,
+            (lines) => {
+                document.title = `${Math.floor(lines).toLocaleString()} LoC - Code Clicker`;
+            }
+        );
+        return () => unsubscribe();
+    }, []);
 
     return (
         <div className="min-h-screen bg-background text-text font-sans selection:bg-cta selection:text-white flex flex-col md:flex-row overflow-hidden relative">
