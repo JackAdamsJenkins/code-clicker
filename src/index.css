@@ -1,0 +1,150 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Default: Cyberpunk (Purple/Pink/Navy) */
+  --color-primary: #7C3AED;
+  /* Violet-600 */
+  --color-secondary: #A78BFA;
+  /* Violet-400 */
+  --color-cta: #F43F5E;
+  /* Rose-500 */
+  --color-background: #0F0F23;
+  /* Deep Navy */
+  --color-text: #E2E8F0;
+  /* Slate-200 */
+  --font-main: 'Inter', system-ui, sans-serif;
+
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark {
+  /* Hacker Mode (Matrix Green/Black) */
+  --color-primary: #22c55e;
+  /* Green-500 */
+  --color-secondary: #00ff41;
+  /* Matrix Green */
+  --color-cta: #15803d;
+  /* Green-700 */
+  --color-background: #000000;
+  /* Pure Black */
+  --color-text: #4ade80;
+  /* Green-400 */
+  --font-main: 'VT323', monospace;
+}
+
+@theme {
+  --font-sans: var(--font-main);
+
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-cta: var(--color-cta);
+  --color-background: var(--color-background);
+  --color-text: var(--color-text);
+
+  /* Legacy/Semantic Mapping */
+  --color-brand: var(--color-primary);
+  --color-brand-hover: var(--color-cta);
+  --color-bg-main: var(--color-background);
+  --color-text-main: var(--color-text);
+  --color-text-dim: var(--color-secondary);
+  --color-border: var(--color-primary);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  @apply antialiased transition-colors duration-500;
+  overflow-x: hidden;
+}
+
+/* Component Specs */
+
+.btn-primary {
+  background: var(--color-cta);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.5);
+}
+
+/* Hacker Mode Overrides for Button */
+:root.dark .btn-primary {
+  background: black;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 5px var(--color-primary);
+  font-family: 'VT323', monospace;
+  letter-spacing: 2px;
+}
+
+:root.dark .btn-primary:hover {
+  background: var(--color-primary);
+  color: black;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  transition: all 200ms ease;
+  backdrop-filter: blur(10px);
+}
+
+:root.dark .card {
+  background: #050505;
+  border: 1px solid var(--color-primary);
+  border-radius: 0;
+  /* Retro sharp corners */
+  box-shadow: none;
+}
+
+/* Utilities */
+.text-glow {
+  text-shadow: 0 0 10px var(--color-primary);
+}
+
+.neon-border {
+  box-shadow: 0 0 5px var(--color-primary), inset 0 0 5px var(--color-primary);
+}
+
+progress {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+progress::-webkit-progress-bar {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+}
+
+:root.dark progress::-webkit-progress-bar {
+  border-radius: 0;
+  border: 1px solid var(--color-primary);
+}
+
+progress::-webkit-progress-value {
+  background-color: var(--color-primary);
+  border-radius: 999px;
+  box-shadow: 0 0 10px var(--color-primary);
+}
+
+:root.dark progress::-webkit-progress-value {
+  border-radius: 0;
+  background-color: var(--color-primary);
+  box-shadow: none;
+}
