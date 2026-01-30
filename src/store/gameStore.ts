@@ -1,6 +1,26 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface SkillDef {
+    id: string;
+    name: string;
+    description: string;
+    cooldown: number; // seconds
+    duration?: number; // seconds
+    icon?: string;
+}
+
+export interface SkillState {
+    activeTimeRemaining: number;
+    cooldownRemaining: number;
+}
+
+export const SKILLS: SkillDef[] = [
+    { id: 's1', name: 'Coffee Break', description: 'Double CPS for 30s', cooldown: 300, duration: 30, icon: 'Coffee' },
+    { id: 's2', name: 'Hackathon', description: 'Click Power x10 for 10s', cooldown: 600, duration: 10, icon: 'Zap' },
+    { id: 's3', name: 'Stack Overflow', description: '+10% LoC instantly, triggers bugs. Active bugs reduce CPS by 20%!', cooldown: 900, duration: 0, icon: 'Bug' },
+];
+
 export interface Upgrade {
     id: string;
     name: string;
@@ -24,6 +44,7 @@ interface GameState {
     clickPower: number;
     upgrades: Upgrade[];
     bugs: Bug[];
+    skills: Record<string, SkillState>;
 
     // Actions
     click: () => void;
@@ -39,6 +60,7 @@ interface GameState {
     lifetimeLines: number;
     getPrestigeGain: () => number;
     prestige: () => void;
+    activateSkill: (id: string) => void;
 }
 
 const INITIAL_UPGRADES: Upgrade[] = [
@@ -59,28 +81,108 @@ export const useGameStore = create<GameState>()(
             upgrades: INITIAL_UPGRADES,
             commits: 0,
             lifetimeLines: 0,
+            skills: {},
 
             click: () => {
                 set((state) => {
-                    const multiplier = 1 + (state.commits * 0.1); // +10% per commit
+                    const commitMultiplier = 1 + (state.commits * 0.1);
+
+                    // Apply Hackathon Skill (s2)
+                    let skillMultiplier = 1;
+                    if (state.skills['s2']?.activeTimeRemaining > 0) {
+                        skillMultiplier = 10;
+                    }
+
+                    const totalMultiplier = commitMultiplier * skillMultiplier;
+                    const gain = state.clickPower * totalMultiplier;
+
                     return {
-                        linesOfCode: state.linesOfCode + (state.clickPower * multiplier),
-                        lifetimeLines: state.lifetimeLines + (state.clickPower * multiplier) // Track lifetime
+                        linesOfCode: state.linesOfCode + gain,
+                        lifetimeLines: state.lifetimeLines + gain
                     };
                 });
             },
 
             tick: (seconds) => {
-                const { cps, cleanupBugs, commits } = get();
-                const multiplier = 1 + (commits * 0.1);
+                const { cps, cleanupBugs, commits, skills } = get();
+
+                // Update Skills Timers
+                let newSkills = { ...skills };
+                let skillsChanged = false;
+
+                Object.keys(newSkills).forEach(key => {
+                    const s = newSkills[key];
+                    if (s.activeTimeRemaining > 0 || s.cooldownRemaining > 0) {
+                        skillsChanged = true;
+                        newSkills[key] = {
+                            activeTimeRemaining: Math.max(0, s.activeTimeRemaining - seconds),
+                            cooldownRemaining: Math.max(0, s.cooldownRemaining - seconds)
+                        };
+                    }
+                });
+
+                // Calculate Multipliers
+                const commitMultiplier = 1 + (commits * 0.1);
+
+                // Active Bug Penalty: Each bug reduces production by 20%  
+                const bugPenalty = get().bugs.length > 0 ? (1 - (0.2 * get().bugs.length)) : 1;
+                // Clamp penalty to 0 to avoid negative generation
+                const effectiveBugPenalty = Math.max(0, bugPenalty);
+
+                // Apply Coffee Break Skill (s1)
+                let skillCpsMultiplier = 1;
+                if (newSkills['s1']?.activeTimeRemaining > 0) {
+                    skillCpsMultiplier = 2;
+                }
+
+                const finalMultiplier = commitMultiplier * skillCpsMultiplier * effectiveBugPenalty;
 
                 if (cps > 0) {
                     set((state) => ({
-                        linesOfCode: state.linesOfCode + (cps * multiplier * seconds),
-                        lifetimeLines: state.lifetimeLines + (cps * multiplier * seconds)
+                        linesOfCode: state.linesOfCode + (cps * finalMultiplier * seconds),
+                        lifetimeLines: state.lifetimeLines + (cps * finalMultiplier * seconds),
+                        skills: skillsChanged ? newSkills : state.skills
+                    }));
+                } else if (skillsChanged) {
+                    set({ skills: newSkills });
+                }
+
+                cleanupBugs();
+            },
+
+            activateSkill: (id) => {
+                const { skills, linesOfCode } = get();
+                const skillDef = SKILLS.find(s => s.id === id);
+                if (!skillDef) return;
+
+                const currentSkillState = skills[id] || { activeTimeRemaining: 0, cooldownRemaining: 0 };
+                if (currentSkillState.cooldownRemaining > 0) return; // On cooldown
+
+                // Apply Immediate Effects
+                if (id === 's3') { // Stack Overflow
+                    const bonus = linesOfCode * 0.10;
+                    // Trigger spawns
+                    const spawnBug = get().spawnBug;
+                    setTimeout(() => spawnBug(), 100);
+                    setTimeout(() => spawnBug(), 300);
+                    setTimeout(() => spawnBug(), 500);
+
+                    set((state) => ({
+                        linesOfCode: state.linesOfCode + bonus,
+                        lifetimeLines: state.lifetimeLines + bonus
                     }));
                 }
-                cleanupBugs();
+
+                // Set State
+                set((state) => ({
+                    skills: {
+                        ...state.skills,
+                        [id]: {
+                            activeTimeRemaining: skillDef.duration || 0,
+                            cooldownRemaining: skillDef.cooldown
+                        }
+                    }
+                }));
             },
 
             buyUpgrade: (id) => {
@@ -148,16 +250,13 @@ export const useGameStore = create<GameState>()(
             },
 
             reset: () => {
-                set({ linesOfCode: 0, cps: 0, clickPower: 1, upgrades: INITIAL_UPGRADES, bugs: [] });
+                set({ linesOfCode: 0, cps: 0, clickPower: 1, upgrades: INITIAL_UPGRADES, bugs: [], skills: {} });
             },
 
             // --- Prestige (Git Push) Mechanics ---
 
             getPrestigeGain: () => {
                 const state = get();
-                // Formula: 1 Commit for every 100,000 LoC earned in this run. 
-                // A bit more complex: Math.floor(Math.pow(state.linesOfCode / 100000, 0.5))? 
-                // Let's stick to linear for now to keep it understandable: 1 Commit / 50k LoC
                 if (state.linesOfCode < 50000) return 0;
                 return Math.floor(state.linesOfCode / 50000);
             },
@@ -174,6 +273,7 @@ export const useGameStore = create<GameState>()(
                         clickPower: 1, // Base click power
                         upgrades: INITIAL_UPGRADES,
                         bugs: [],
+                        skills: {},
 
                         // Gain Prestige
                         commits: state.commits + gain,
@@ -190,7 +290,7 @@ export const useGameStore = create<GameState>()(
                 upgrades: state.upgrades,
                 commits: state.commits,
                 lifetimeLines: state.lifetimeLines,
-                // Do not persist active bugs
+                skills: state.skills,
             }),
         }
     )

@@ -5,6 +5,7 @@ import UpgradePanel from '../components/UpgradePanel';
 import ThemeToggle from '../components/ThemeToggle';
 import ActiveBugs from '../components/ActiveBugs';
 import PrestigeModal from '../components/PrestigeModal';
+import SkillPanel from '../components/SkillPanel';
 
 export default function GameLayout() {
     const tick = useGameStore((state) => state.tick);
@@ -73,7 +74,8 @@ export default function GameLayout() {
                     <ThemeToggle />
                 </div>
 
-                <div className="w-full max-w-6xl mx-auto">
+                <div className="w-full max-w-6xl mx-auto pb-20">
+                    <SkillPanel />
                     <header className="mb-6 border-l-4 border-cta pl-6 py-2 bg-gradient-to-r from-cta/10 to-transparent rounded-r-lg backdrop-blur-sm">
                         <div className="flex items-baseline gap-4">
                             <h2 className="text-2xl font-bold uppercase tracking-widest text-white text-glow">System Upgrades</h2>

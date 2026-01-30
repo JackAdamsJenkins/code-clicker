@@ -38,6 +38,7 @@ WEB
 - [x] **Game Loop**: Implement `useInterval`. → Verify: Resources grow.
 - [x] **UI - Hero**: Build `ClickArea` with particle effects. → Verify: Visuals trigger.
 - [x] **UI - Shop**: Build `UpgradePanel`. → Verify: Can buy items.
+- [x] **UI - Skills**: Build `SkillPanel` with Active Skills (Option B). → Verify: Cooldowns & Effects work.
 - [x] **Persistence**: Add Zustand persist middleware. → Verify: State survives reload.
 
 ## ✅ PHASE X COMPLETE
