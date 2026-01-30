@@ -30,7 +30,14 @@ export const SKILLS: SkillDef[] = [
     { id: 's1', name: 'Coffee Break', description: 'Double CPS for 30s', cooldown: 300, duration: 30, icon: 'Coffee' },
     { id: 's2', name: 'Hackathon', description: 'Click Power x10 for 10s', cooldown: 600, duration: 10, icon: 'Zap' },
     { id: 's3', name: 'Stack Overflow', description: '+10% LoC instantly, triggers bugs. Active bugs reduce CPS by 20%!', cooldown: 900, duration: 0, icon: 'Bug' },
+    { id: 's4', name: 'Rubber Duck', description: 'Click Power x5 for 20s. Quack!', cooldown: 120, duration: 20, icon: 'WholeWord' },
+    { id: 's5', name: 'Hotfix', description: 'Instantly clears all bugs + 10 mins of CPS.', cooldown: 600, duration: 0, icon: 'Flame' },
+    { id: 's6', name: 'Deploy to Prod', description: 'Gains 10% of current LoC instantly, spawns 3 bugs.', cooldown: 1800, duration: 0, icon: 'Rocket' },
 ];
+
+export const calculateTalentCost = (baseCost: number, currentLevel: number): number => {
+    return Math.floor(baseCost * (currentLevel + 1));
+};
 
 export interface TalentDef {
     id: string;
@@ -81,6 +88,25 @@ export const TALENT_TREE: TalentDef[] = [
         description: 'Gain +10% more Commits on Prestige per level.',
         baseCost: 5, maxLevel: 5,
         effectDesc: (l) => `+${l * 10}% Prestige Gain`
+    },
+    // New Tier 2 Talents
+    {
+        id: 't_f3', branch: 'frontend', name: 'Virtual DOM',
+        description: 'Click Power multiplier increased by 0.5% per owned Upgrade.',
+        baseCost: 10, maxLevel: 5,
+        effectDesc: (l) => `+${(l * 0.5).toFixed(1)}% Multiplier / Upgrade`
+    },
+    {
+        id: 't_b3', branch: 'backend', name: 'Redis Cache',
+        description: 'Reduces Active Skill Cooldowns by 5% per level.',
+        baseCost: 15, maxLevel: 5,
+        effectDesc: (l) => `-${l * 5}% Cooldown`
+    },
+    {
+        id: 't_d3', branch: 'devops', name: 'Chaos Monkey',
+        description: 'Bug Catching rewards increased by 50% per level.',
+        baseCost: 10, maxLevel: 10,
+        effectDesc: (l) => `+${l * 50}% Catch Reward`
     }
 ];
 
@@ -187,12 +213,23 @@ export const useGameStore = create<GameState>()(
                     // Apply Hackathon Skill (s2)
                     let skillMultiplier = 1;
                     if (state.skills['s2']?.activeTimeRemaining > 0) {
-                        skillMultiplier = 10;
+                        skillMultiplier *= 10;
+                    }
+                    // Apply Rubber Duck Skill (s4)
+                    if (state.skills['s4']?.activeTimeRemaining > 0) {
+                        skillMultiplier *= 5;
                     }
 
                     // Talent Multiplier (Frontend - t_f1)
                     const f1Level = state.talents['t_f1'] || 0;
-                    const talentMultiplier = 1 + (f1Level * 0.5);
+                    let talentMultiplier = 1 + (f1Level * 0.5);
+
+                    // Talent Multiplier (Frontend - t_f3: Virtual DOM)
+                    const f3Level = state.talents['t_f3'] || 0;
+                    if (f3Level > 0) {
+                        const totalUpgradesCtx = state.upgrades.reduce((acc, u) => acc + u.count, 0);
+                        talentMultiplier += (totalUpgradesCtx * (f3Level * 0.005));
+                    }
 
                     const totalMultiplier = commitMultiplier * skillMultiplier * talentMultiplier;
                     const gain = state.clickPower * totalMultiplier;
@@ -291,19 +328,41 @@ export const useGameStore = create<GameState>()(
                         linesOfCode: state.linesOfCode + bonus,
                         lifetimeLines: state.lifetimeLines + bonus
                     }));
+                } else if (id === 's5') { // Hotfix
+                    const bonus = get().cps * 600; // 10 mins
+                    set((state) => ({
+                        linesOfCode: state.linesOfCode + bonus,
+                        lifetimeLines: state.lifetimeLines + bonus,
+                        bugs: [] // Clear all bugs
+                    }));
+                } else if (id === 's6') { // Deploy to Prod
+                    const bonus = get().linesOfCode * 0.10;
+                    const spawnBug = get().spawnBug;
+                    setTimeout(() => spawnBug(), 100);
+                    setTimeout(() => spawnBug(), 300);
+                    setTimeout(() => spawnBug(), 500);
+
+                    set((state) => ({
+                        linesOfCode: state.linesOfCode + bonus,
+                        lifetimeLines: state.lifetimeLines + bonus
+                    }));
                 }
 
                 // Set State
                 // Talent Duration Bonus (Frontend - t_f2)
-                // Note: We need to check talents here properly
                 const talentDurationMult = 1 + ((get().talents['t_f2'] || 0) * 0.2);
+
+                // Talent Cooldown Reduction (Backend - t_b3: Redis Cache)
+                const b3Level = get().talents['t_b3'] || 0;
+                const cooldownReductionRaw = 1 - (b3Level * 0.05);
+                const cooldownMult = Math.max(0.2, cooldownReductionRaw); // Cap at 80% reduction
 
                 set((state) => ({
                     skills: {
                         ...state.skills,
                         [id]: {
                             activeTimeRemaining: (skillDef.duration || 0) * talentDurationMult,
-                            cooldownRemaining: skillDef.cooldown
+                            cooldownRemaining: skillDef.cooldown * cooldownMult
                         }
                     }
                 }));
@@ -347,7 +406,9 @@ export const useGameStore = create<GameState>()(
                     const currentLevel = state.talents[id] || 0;
                     if (currentLevel >= talentDef.maxLevel) return state;
 
-                    const cost = talentDef.baseCost;
+                    if (currentLevel >= talentDef.maxLevel) return state;
+
+                    const cost = calculateTalentCost(talentDef.baseCost, currentLevel);
 
                     if (state.commits >= cost) {
                         return {
@@ -384,7 +445,13 @@ export const useGameStore = create<GameState>()(
                     if (!bugExists) return state;
 
                     // Bonus Calculation: 20x CPS or 500 lines, whichever is higher
-                    const bonus = Math.max(state.cps * 20, 500);
+                    let bonus = Math.max(state.cps * 20, 500);
+
+                    // Talent Bonus (DevOps - t_d3: Chaos Monkey)
+                    const d3Level = state.talents['t_d3'] || 0;
+                    if (d3Level > 0) {
+                        bonus *= (1 + d3Level * 0.5);
+                    }
 
                     return {
                         bugs: state.bugs.filter(b => b.id !== id),

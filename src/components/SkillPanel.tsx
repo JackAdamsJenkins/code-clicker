@@ -1,12 +1,15 @@
 import { useGameStore, SKILLS } from '../store/gameStore';
 import { motion } from 'framer-motion';
-import { Coffee, Zap, Bug } from 'lucide-react';
+import { Coffee, Zap, Bug, WholeWord, Flame, Rocket } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const ICONS: Record<string, React.ReactNode> = {
     's1': <Coffee size={20} />,
     's2': <Zap size={20} />,
     's3': <Bug size={20} />,
+    's4': <WholeWord size={20} />,
+    's5': <Flame size={20} />,
+    's6': <Rocket size={20} />,
 };
 
 export default function SkillPanel() {

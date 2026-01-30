@@ -1,4 +1,4 @@
-import { useGameStore, TALENT_TREE } from '../store/gameStore';
+import { useGameStore, TALENT_TREE, calculateTalentCost } from '../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { GitCommit, Monitor, Server, Box, X } from 'lucide-react';
@@ -87,7 +87,8 @@ export function TechTree({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                                                 {branches[branchKey].map((talent) => {
                                                     const currentLevel = talents[talent.id] || 0;
                                                     const isMaxed = currentLevel >= talent.maxLevel;
-                                                    const canAfford = commits >= talent.baseCost;
+                                                    const cost = calculateTalentCost(talent.baseCost, currentLevel);
+                                                    const canAfford = commits >= cost;
 
                                                     return (
                                                         <div key={talent.id} className="relative z-10">
@@ -125,7 +126,7 @@ export function TechTree({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                                                                     {!isMaxed ? (
                                                                         <div className={clsx("flex items-center gap-1.5 text-xs font-bold", canAfford ? "text-white" : "text-gray-500")}>
                                                                             <GitCommit size={12} />
-                                                                            {formatNumber(talent.baseCost)}
+                                                                            {formatNumber(cost)}
                                                                         </div>
                                                                     ) : (
                                                                         <span className="text-xs font-bold text-cta">MAXED</span>
