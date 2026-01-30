@@ -33,6 +33,12 @@ interface GameState {
     catchBug: (id: string) => void;
     cleanupBugs: () => void;
     reset: () => void;
+
+    // Prestige
+    commits: number;
+    lifetimeLines: number;
+    getPrestigeGain: () => number;
+    prestige: () => void;
 }
 
 const INITIAL_UPGRADES: Upgrade[] = [
@@ -51,15 +57,28 @@ export const useGameStore = create<GameState>()(
             cps: 0,
             clickPower: 1,
             upgrades: INITIAL_UPGRADES,
+            commits: 0,
+            lifetimeLines: 0,
 
             click: () => {
-                set((state) => ({ linesOfCode: state.linesOfCode + state.clickPower }));
+                set((state) => {
+                    const multiplier = 1 + (state.commits * 0.1); // +10% per commit
+                    return {
+                        linesOfCode: state.linesOfCode + (state.clickPower * multiplier),
+                        lifetimeLines: state.lifetimeLines + (state.clickPower * multiplier) // Track lifetime
+                    };
+                });
             },
 
             tick: (seconds) => {
-                const { cps, cleanupBugs } = get();
+                const { cps, cleanupBugs, commits } = get();
+                const multiplier = 1 + (commits * 0.1);
+
                 if (cps > 0) {
-                    set((state) => ({ linesOfCode: state.linesOfCode + cps * seconds }));
+                    set((state) => ({
+                        linesOfCode: state.linesOfCode + (cps * multiplier * seconds),
+                        lifetimeLines: state.lifetimeLines + (cps * multiplier * seconds)
+                    }));
                 }
                 cleanupBugs();
             },
@@ -131,6 +150,37 @@ export const useGameStore = create<GameState>()(
             reset: () => {
                 set({ linesOfCode: 0, cps: 0, clickPower: 1, upgrades: INITIAL_UPGRADES, bugs: [] });
             },
+
+            // --- Prestige (Git Push) Mechanics ---
+
+            getPrestigeGain: () => {
+                const state = get();
+                // Formula: 1 Commit for every 100,000 LoC earned in this run. 
+                // A bit more complex: Math.floor(Math.pow(state.linesOfCode / 100000, 0.5))? 
+                // Let's stick to linear for now to keep it understandable: 1 Commit / 50k LoC
+                if (state.linesOfCode < 50000) return 0;
+                return Math.floor(state.linesOfCode / 50000);
+            },
+
+            prestige: () => {
+                set((state) => {
+                    const gain = Math.floor(state.linesOfCode / 50000);
+                    if (gain <= 0) return state;
+
+                    return {
+                        // Reset Run
+                        linesOfCode: 0,
+                        cps: 0,
+                        clickPower: 1, // Base click power
+                        upgrades: INITIAL_UPGRADES,
+                        bugs: [],
+
+                        // Gain Prestige
+                        commits: state.commits + gain,
+                        lifetimeLines: state.lifetimeLines + state.linesOfCode,
+                    };
+                });
+            },
         }),
         {
             name: 'clicker-storage',
@@ -138,6 +188,8 @@ export const useGameStore = create<GameState>()(
                 linesOfCode: state.linesOfCode,
                 cps: state.cps,
                 upgrades: state.upgrades,
+                commits: state.commits,
+                lifetimeLines: state.lifetimeLines,
                 // Do not persist active bugs
             }),
         }

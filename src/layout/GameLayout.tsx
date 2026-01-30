@@ -4,6 +4,7 @@ import ClickArea from '../components/ClickArea';
 import UpgradePanel from '../components/UpgradePanel';
 import ThemeToggle from '../components/ThemeToggle';
 import ActiveBugs from '../components/ActiveBugs';
+import PrestigeModal from '../components/PrestigeModal';
 
 export default function GameLayout() {
     const tick = useGameStore((state) => state.tick);
@@ -55,6 +56,7 @@ export default function GameLayout() {
             </div>
 
             <ActiveBugs />
+            <PrestigeModal />
 
             {/* Left Panel: Click Area & Stats */}
             <section className="w-full md:w-5/12 lg:w-4/12 border-b md:border-b-0 md:border-r border-primary/30 p-8 flex flex-col items-center justify-center relative z-10 backdrop-blur-md bg-background/60">
