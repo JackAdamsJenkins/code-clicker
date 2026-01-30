@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import ClickArea from '../components/ClickArea';
 import UpgradePanel from '../components/UpgradePanel';
@@ -6,10 +6,13 @@ import ThemeToggle from '../components/ThemeToggle';
 import ActiveBugs from '../components/ActiveBugs';
 import PrestigeModal from '../components/PrestigeModal';
 import SkillPanel from '../components/SkillPanel';
+import { TechTree } from '../components/TechTree';
+import { GitCommit } from 'lucide-react'; // Import Icon
 
 export default function GameLayout() {
     const tick = useGameStore((state) => state.tick);
     const spawnBug = useGameStore((state) => state.spawnBug);
+    const [isTechTreeOpen, setIsTechTreeOpen] = useState(false);
 
     useEffect(() => {
         // Game loop - using delta time to handle background throttling
@@ -58,6 +61,7 @@ export default function GameLayout() {
 
             <ActiveBugs />
             <PrestigeModal />
+            <TechTree isOpen={isTechTreeOpen} onClose={() => setIsTechTreeOpen(false)} />
 
             {/* Left Panel: Click Area & Stats */}
             <section className="w-full md:w-5/12 lg:w-4/12 border-b md:border-b-0 md:border-r border-primary/30 p-8 flex flex-col items-center justify-center relative z-10 backdrop-blur-md bg-background/60">
@@ -70,7 +74,14 @@ export default function GameLayout() {
 
             {/* Right Panel: Upgrades & Shop */}
             <section className="flex-1 p-4 md:p-8 overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-primary scrollbar-track-background/50 z-10 relative">
-                <div className="absolute top-6 right-6 z-50">
+                <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
+                    <button
+                        onClick={() => setIsTechTreeOpen(true)}
+                        className="p-2 rounded-full bg-black/40 border border-cta/30 text-cta hover:bg-cta hover:text-white transition-all shadow-[0_0_15px_rgba(244,63,94,0.1)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)]"
+                        title="Tech Tree"
+                    >
+                        <GitCommit size={20} />
+                    </button>
                     <ThemeToggle />
                 </div>
 

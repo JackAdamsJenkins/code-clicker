@@ -21,6 +21,58 @@ export const SKILLS: SkillDef[] = [
     { id: 's3', name: 'Stack Overflow', description: '+10% LoC instantly, triggers bugs. Active bugs reduce CPS by 20%!', cooldown: 900, duration: 0, icon: 'Bug' },
 ];
 
+export interface TalentDef {
+    id: string;
+    branch: 'frontend' | 'backend' | 'devops';
+    name: string;
+    description: string;
+    baseCost: number;
+    maxLevel: number;
+    effectDesc: (level: number) => string;
+}
+
+export const TALENT_TREE: TalentDef[] = [
+    // Frontend
+    {
+        id: 't_f1', branch: 'frontend', name: 'Hydration Optimization',
+        description: 'Increases Click Power by 50% per level.',
+        baseCost: 1, maxLevel: 10,
+        effectDesc: (l) => `+${l * 50}% Click Power`
+    },
+    {
+        id: 't_f2', branch: 'frontend', name: 'Component Memoization',
+        description: 'Active Skills last 20% longer per level.',
+        baseCost: 2, maxLevel: 5,
+        effectDesc: (l) => `+${l * 20}% Duration`
+    },
+    // Backend
+    {
+        id: 't_b1', branch: 'backend', name: 'Microservices',
+        description: 'Increases Passive Income (CPS) by 25% per level.',
+        baseCost: 1, maxLevel: 10,
+        effectDesc: (l) => `+${l * 25}% CPS`
+    },
+    {
+        id: 't_b2', branch: 'backend', name: 'Load Balancing',
+        description: 'Reduces passive bug penalty effectiveness.',
+        baseCost: 3, maxLevel: 5,
+        effectDesc: (l) => `-${l * 10}% Bug Penalty`
+    },
+    // DevOps
+    {
+        id: 't_d1', branch: 'devops', name: 'Containerization',
+        description: 'Reduces Upgrade Costs by 5% per level.',
+        baseCost: 2, maxLevel: 10,
+        effectDesc: (l) => `-${l * 5}% Upgrade Cost`
+    },
+    {
+        id: 't_d2', branch: 'devops', name: 'CI/CD Pipeline',
+        description: 'Gain +10% more Commits on Prestige per level.',
+        baseCost: 5, maxLevel: 5,
+        effectDesc: (l) => `+${l * 10}% Prestige Gain`
+    }
+];
+
 export interface Upgrade {
     id: string;
     name: string;
@@ -45,6 +97,7 @@ interface GameState {
     upgrades: Upgrade[];
     bugs: Bug[];
     skills: Record<string, SkillState>;
+    talents: Record<string, number>; // id -> level
 
     // Actions
     click: () => void;
@@ -61,6 +114,7 @@ interface GameState {
     getPrestigeGain: () => number;
     prestige: () => void;
     activateSkill: (id: string) => void;
+    buyTalent: (id: string) => void;
 }
 
 const INITIAL_UPGRADES: Upgrade[] = [
@@ -82,6 +136,7 @@ export const useGameStore = create<GameState>()(
             commits: 0,
             lifetimeLines: 0,
             skills: {},
+            talents: {},
 
             click: () => {
                 set((state) => {
@@ -93,7 +148,11 @@ export const useGameStore = create<GameState>()(
                         skillMultiplier = 10;
                     }
 
-                    const totalMultiplier = commitMultiplier * skillMultiplier;
+                    // Talent Multiplier (Frontend - t_f1)
+                    const f1Level = state.talents['t_f1'] || 0;
+                    const talentMultiplier = 1 + (f1Level * 0.5);
+
+                    const totalMultiplier = commitMultiplier * skillMultiplier * talentMultiplier;
                     const gain = state.clickPower * totalMultiplier;
 
                     return {
@@ -135,7 +194,11 @@ export const useGameStore = create<GameState>()(
                     skillCpsMultiplier = 2;
                 }
 
-                const finalMultiplier = commitMultiplier * skillCpsMultiplier * effectiveBugPenalty;
+                // Talent Multiplier (Backend - t_b1)
+                const b1Level = get().talents['t_b1'] || 0;
+                const talentMultiplier = 1 + (b1Level * 0.25);
+
+                const finalMultiplier = commitMultiplier * skillCpsMultiplier * effectiveBugPenalty * talentMultiplier;
 
                 if (cps > 0) {
                     set((state) => ({
@@ -174,11 +237,15 @@ export const useGameStore = create<GameState>()(
                 }
 
                 // Set State
+                // Talent Duration Bonus (Frontend - t_f2)
+                // Note: We need to check talents here properly
+                const talentDurationMult = 1 + ((get().talents['t_f2'] || 0) * 0.2);
+
                 set((state) => ({
                     skills: {
                         ...state.skills,
                         [id]: {
-                            activeTimeRemaining: skillDef.duration || 0,
+                            activeTimeRemaining: (skillDef.duration || 0) * talentDurationMult,
                             cooldownRemaining: skillDef.cooldown
                         }
                     }
@@ -191,7 +258,12 @@ export const useGameStore = create<GameState>()(
                     if (upgradeIndex === -1) return state;
 
                     const upgrade = state.upgrades[upgradeIndex];
-                    const cost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count));
+
+                    // Talent Discount (DevOps - t_d1)
+                    const d1Level = state.talents['t_d1'] || 0;
+                    const discount = 1 - Math.min(0.5, d1Level * 0.05); // Max 50% discount cap safely
+
+                    const cost = Math.floor((upgrade.baseCost * Math.pow(1.15, upgrade.count)) * discount);
 
                     if (state.linesOfCode >= cost) {
                         const newUpgrades = [...state.upgrades];
@@ -204,6 +276,29 @@ export const useGameStore = create<GameState>()(
                             linesOfCode: state.linesOfCode - cost,
                             upgrades: newUpgrades,
                             cps: newCps,
+                        };
+                    }
+                    return state;
+                });
+            },
+
+            buyTalent: (id) => {
+                set((state) => {
+                    const talentDef = TALENT_TREE.find(t => t.id === id);
+                    if (!talentDef) return state;
+
+                    const currentLevel = state.talents[id] || 0;
+                    if (currentLevel >= talentDef.maxLevel) return state;
+
+                    const cost = talentDef.baseCost;
+
+                    if (state.commits >= cost) {
+                        return {
+                            commits: state.commits - cost,
+                            talents: {
+                                ...state.talents,
+                                [id]: currentLevel + 1
+                            }
                         };
                     }
                     return state;
@@ -258,12 +353,22 @@ export const useGameStore = create<GameState>()(
             getPrestigeGain: () => {
                 const state = get();
                 if (state.linesOfCode < 50000) return 0;
-                return Math.floor(state.linesOfCode / 50000);
+
+                // Talent Bonus (DevOps - t_d2)
+                const d2Level = state.talents['t_d2'] || 0;
+                const multiplier = 1 + (d2Level * 0.1);
+
+                return Math.floor((state.linesOfCode / 50000) * multiplier);
             },
 
             prestige: () => {
                 set((state) => {
-                    const gain = Math.floor(state.linesOfCode / 50000);
+                    // Logic duplicated for safety, or we could call getPrestigeGain but we need state access inside set if we want to be pure
+                    // Re-calculating to be safe inside the reducer logic
+                    const d2Level = state.talents['t_d2'] || 0;
+                    const multiplier = 1 + (d2Level * 0.1);
+                    const gain = Math.floor((state.linesOfCode / 50000) * multiplier);
+
                     if (gain <= 0) return state;
 
                     return {
@@ -291,6 +396,7 @@ export const useGameStore = create<GameState>()(
                 commits: state.commits,
                 lifetimeLines: state.lifetimeLines,
                 skills: state.skills,
+                talents: state.talents,
             }),
         }
     )

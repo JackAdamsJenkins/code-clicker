@@ -39,6 +39,7 @@ WEB
 - [x] **UI - Hero**: Build `ClickArea` with particle effects. → Verify: Visuals trigger.
 - [x] **UI - Shop**: Build `UpgradePanel`. → Verify: Can buy items.
 - [x] **UI - Skills**: Build `SkillPanel` with Active Skills (Option B). → Verify: Cooldowns & Effects work.
+- [x] **Meta - Prestige**: Build `TechTree` with 3 Branches (Option A). → Verify: Commits spendable.
 - [x] **Persistence**: Add Zustand persist middleware. → Verify: State survives reload.
 
 ## ✅ PHASE X COMPLETE
