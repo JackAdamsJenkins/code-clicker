@@ -13,17 +13,31 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function UpgradePanel() {
-    const { upgrades, linesOfCode, buyUpgrade, commits } = useGameStore();
+    const { upgrades, linesOfCode, buyUpgrade, commits, talents, skills, bugs } = useGameStore();
 
     const getCost = (u: Upgrade) => Math.floor(u.baseCost * Math.pow(1.15, u.count));
-    const multiplier = 1 + (commits * 0.1);
+
+    // Calculate Global Multiplier (Replicating store logic for display)
+    const commitMultiplier = 1 + (commits * 0.1);
+    const bugPenalty = bugs.length > 0 ? (1 - (0.2 * bugs.length)) : 1;
+    const effectiveBugPenalty = Math.max(0, bugPenalty);
+
+    let skillCpsMultiplier = 1;
+    if (skills['s1']?.activeTimeRemaining > 0) {
+        skillCpsMultiplier = 2;
+    }
+
+    const b1Level = talents['t_b1'] || 0;
+    const talentMultiplier = 1 + (b1Level * 0.25);
+
+    const totalMultiplier = commitMultiplier * skillCpsMultiplier * effectiveBugPenalty * talentMultiplier;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-20">
             {upgrades.map((u) => {
                 const cost = getCost(u);
                 const canAfford = linesOfCode >= cost;
-                const effectiveCps = u.baseCps * multiplier;
+                const effectiveCps = u.baseCps * totalMultiplier;
 
                 return (
                     <motion.button

@@ -115,6 +115,7 @@ interface GameState {
     prestige: () => void;
     activateSkill: (id: string) => void;
     buyTalent: (id: string) => void;
+    getProductionRate: () => number;
 }
 
 const INITIAL_UPGRADES: Upgrade[] = [
@@ -385,6 +386,29 @@ export const useGameStore = create<GameState>()(
                         lifetimeLines: state.lifetimeLines + state.linesOfCode,
                     };
                 });
+            },
+
+            getProductionRate: () => {
+                const { cps, commits, skills, talents, bugs } = get();
+                
+                // 1. Commit Multiplier
+                const commitMultiplier = 1 + (commits * 0.1);
+
+                // 2. Bug Penalty
+                const bugPenalty = bugs.length > 0 ? (1 - (0.2 * bugs.length)) : 1;
+                const effectiveBugPenalty = Math.max(0, bugPenalty);
+
+                // 3. Skill Multiplier (Coffee Break - s1)
+                let skillCpsMultiplier = 1;
+                if (skills['s1']?.activeTimeRemaining > 0) {
+                    skillCpsMultiplier = 2;
+                }
+
+                // 4. Talent Multiplier (Backend - t_b1)
+                const b1Level = talents['t_b1'] || 0;
+                const talentMultiplier = 1 + (b1Level * 0.25);
+
+                return cps * commitMultiplier * skillCpsMultiplier * effectiveBugPenalty * talentMultiplier;
             },
         }),
         {

@@ -17,9 +17,8 @@ interface Particle {
 }
 
 export default function ClickArea() {
-    const { linesOfCode, cps, click, clickPower, commits } = useGameStore();
-    const multiplier = 1 + (commits * 0.1);
-    const effectiveCps = cps * multiplier;
+    const { linesOfCode, click, clickPower, getProductionRate } = useGameStore();
+    const effectiveCps = getProductionRate();
     const [particles, setParticles] = useState<Particle[]>([]);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
