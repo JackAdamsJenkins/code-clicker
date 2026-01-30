@@ -3,18 +3,27 @@ import { useGameStore } from '../store/gameStore';
 import ClickArea from '../components/ClickArea';
 import UpgradePanel from '../components/UpgradePanel';
 import ThemeToggle from '../components/ThemeToggle';
+import ActiveBugs from '../components/ActiveBugs';
 
 export default function GameLayout() {
     const tick = useGameStore((state) => state.tick);
+    const spawnBug = useGameStore((state) => state.spawnBug);
 
     useEffect(() => {
         // Game loop - tick every 100ms
         const interval = setInterval(() => {
             tick(0.1);
+
+            // Random bug spawn (approx every 10-20 seconds)
+            // 1% chance per tick (10 ticks/sec = 10% chance per second) -> too high?
+            // Let's settle on 0.5% chance per 100ms tick = ~5% chance per second.
+            if (Math.random() < 0.005) {
+                spawnBug();
+            }
         }, 100);
 
         return () => clearInterval(interval);
-    }, [tick]);
+    }, [tick, spawnBug]);
 
     return (
         <div className="min-h-screen bg-background text-text font-sans selection:bg-cta selection:text-white flex flex-col md:flex-row overflow-hidden relative">
@@ -25,6 +34,8 @@ export default function GameLayout() {
                 <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-cta/10 blur-[100px]" />
                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
             </div>
+
+            <ActiveBugs />
 
             {/* Left Panel: Click Area & Stats */}
             <section className="w-full md:w-5/12 lg:w-4/12 border-b md:border-b-0 md:border-r border-primary/30 p-8 flex flex-col items-center justify-center relative z-10 backdrop-blur-md bg-background/60">

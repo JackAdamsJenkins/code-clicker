@@ -11,16 +11,27 @@ export interface Upgrade {
     description: string;
 }
 
+interface Bug {
+    id: string;
+    x: number;
+    y: number;
+    createdAt: number;
+}
+
 interface GameState {
     linesOfCode: number;
     cps: number;
     clickPower: number;
     upgrades: Upgrade[];
+    bugs: Bug[];
 
     // Actions
     click: () => void;
     tick: (seconds: number) => void;
     buyUpgrade: (id: string) => void;
+    spawnBug: () => void;
+    catchBug: (id: string) => void;
+    cleanupBugs: () => void;
     reset: () => void;
 }
 
@@ -46,10 +57,11 @@ export const useGameStore = create<GameState>()(
             },
 
             tick: (seconds) => {
-                const { cps } = get();
+                const { cps, cleanupBugs } = get();
                 if (cps > 0) {
                     set((state) => ({ linesOfCode: state.linesOfCode + cps * seconds }));
                 }
+                cleanupBugs();
             },
 
             buyUpgrade: (id) => {
@@ -64,11 +76,8 @@ export const useGameStore = create<GameState>()(
                         const newUpgrades = [...state.upgrades];
                         newUpgrades[upgradeIndex] = { ...upgrade, count: upgrade.count + 1 };
 
-                        // Recalculate CPS and Click Power
+                        // Recalculate CPS
                         const newCps = newUpgrades.reduce((acc, u) => acc + (u.baseCps * u.count), 0);
-                        // Example: Every 10 'Mechanical Keyboards' adds 1 click power could be a bonus, but for now simple.
-                        // Let's make click power static + manual upgrades if we had them. 
-                        // For now, let's say "Fix Typos" adds specific click power? No, generic logic.
 
                         return {
                             linesOfCode: state.linesOfCode - cost,
@@ -80,12 +89,57 @@ export const useGameStore = create<GameState>()(
                 });
             },
 
+            // --- Bug Bounty Mechanics ---
+            bugs: [],
+
+            spawnBug: () => {
+                set((state) => {
+                    if (state.bugs.length >= 3) return state; // Max 3 active bugs
+                    const newBug: Bug = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        x: Math.random() * 80 + 10, // 10% to 90%
+                        y: Math.random() * 80 + 10,
+                        createdAt: Date.now(),
+                    };
+                    return { bugs: [...state.bugs, newBug] };
+                });
+            },
+
+            catchBug: (id) => {
+                set((state) => {
+                    const bugExists = state.bugs.find(b => b.id === id);
+                    if (!bugExists) return state;
+
+                    // Bonus Calculation: 20x CPS or 500 lines, whichever is higher
+                    const bonus = Math.max(state.cps * 20, 500);
+
+                    return {
+                        bugs: state.bugs.filter(b => b.id !== id),
+                        linesOfCode: state.linesOfCode + bonus
+                    };
+                });
+            },
+
+            cleanupBugs: () => {
+                // Remove bugs older than 5 seconds
+                const now = Date.now();
+                set((state) => ({
+                    bugs: state.bugs.filter(b => now - b.createdAt < 5000)
+                }));
+            },
+
             reset: () => {
-                set({ linesOfCode: 0, cps: 0, clickPower: 1, upgrades: INITIAL_UPGRADES });
+                set({ linesOfCode: 0, cps: 0, clickPower: 1, upgrades: INITIAL_UPGRADES, bugs: [] });
             },
         }),
         {
             name: 'clicker-storage',
+            partialize: (state) => ({
+                linesOfCode: state.linesOfCode,
+                cps: state.cps,
+                upgrades: state.upgrades,
+                // Do not persist active bugs
+            }),
         }
     )
 );
